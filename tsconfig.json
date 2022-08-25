@@ -16,6 +16,7 @@
     "jsxFactory": "createElement"
   },
   "include": [
-    "./src/**/*.ts", "src/Compat.tsx"
+    "./src/**/*.ts",
+    "./src/**/*.tsx",
   ]
 }

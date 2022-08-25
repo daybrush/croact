@@ -3,7 +3,7 @@ import { diff } from "@egjs/list-differ";
 import { Provider } from "./base/Provider";
 import { createProvider } from "./renderProviders";
 import { CompatElement } from "./types";
-import { fillKeys, findDOMNode } from "./utils";
+import { fillKeys, findDOMNode, removeNode } from "./utils";
 
 
 export class ContainerProvider extends Provider<any> {
@@ -38,7 +38,7 @@ export class TextProvider extends Provider<Node> {
         return true;
     }
     public _unmount() {
-        this.base.parentNode!.removeChild(this.base);
+        removeNode(this.base);
     }
 }
 

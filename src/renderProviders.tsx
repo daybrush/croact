@@ -3,31 +3,11 @@ import { diff } from "@egjs/list-differ";
 import { Component } from "./base/Component";
 import { ComponentProvider } from "./base/ComponentProvider";
 import { ElementProvider } from "./base/ElementProvider";
-import { Provider } from "./base/Provider";
+import { Provider, setCurrentInstance } from "./base/Provider";
 import { ContainerProvider, diffProviders, TextProvider } from "./providers";
 import { CompatElement } from "./types";
 import { executeHooks, findContainerNode, findDOMNode } from "./utils";
 
-
-
-function updateProvider(
-    provider: Provider,
-    children: Array<CompatElement | string>,
-    nextContexts: Record<string, Component>,
-    nextState?: any,
-) {
-    const hooks: Function[] = [];
-    renderProviders(
-        provider,
-        provider._ps,
-        children,
-        hooks,
-        nextContexts,
-        nextState,
-        false,
-    );
-    executeHooks(hooks);
-}
 
 function getNextSibiling(
     provider: Provider,
@@ -49,7 +29,7 @@ function getNextSibiling(
 
 export function createProvider(el: CompatElement | string, key: string, index: number, containerProvider: Provider) {
     const depth = containerProvider.depth + 1;
-    
+
     if (isString(el) || isNumber(el)) {
         return new TextProvider(`text_${el}`, depth, key, index, containerProvider, null, {});
     }
@@ -103,7 +83,7 @@ export function renderProviders(
 export function renderProvider(
     element: any,
     container: Element,
-    provider: Provider | null = (container as any).__REACT_COMPAT__,
+    provider: Provider | null = (container as any).__CROACT_,
     contexts: Record<string, Component> = {},
 ) {
     const isProvider = !!provider;
@@ -111,16 +91,27 @@ export function renderProvider(
     if (!provider) {
         provider = new ContainerProvider(container, 0);
     }
-    updateProvider(provider, element ? [element] : [], contexts);
+    const hooks: Function[] = [];
+
+    renderProviders(
+        provider,
+        provider._ps,
+        element ? [element] : [],
+        hooks,
+        contexts,
+    );
+
+    executeHooks(hooks);
+    setCurrentInstance(null);
 
     if (!isProvider) {
-        (container as any).__REACT_COMPAT__ = provider;
+        (container as any).__CROACT_ = provider;
     }
     return provider;
 }
 
 export function render(element: any, container: Element, callback?: Function) {
-    const provider = (container as any).__REACT_COMPAT__;
+    const provider = (container as any).__CROACT_;
     if (element && !provider) {
         container.innerHTML = "";
     }

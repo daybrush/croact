@@ -3,19 +3,19 @@ import { renderProviders } from "../renderProviders";
 import { Context } from "../types";
 import { executeHooks, isDiff } from "../utils";
 import { ComponentProvider } from "./ComponentProvider";
-import { Provider } from "./Provider";
+import { Provider, setCurrentInstance } from "./Provider";
 
 export class Component {
     public static defaultProps?: IObject<any>;
     public static conextType?: Context;
-    
+
     public state: IObject<any> = {};
-    public $_provider: ComponentProvider;
+    public $_p: ComponentProvider;
     public $_timer = 0;
     public $_state: IObject<any> = {};
     public $_req!: boolean;
     public $_subs: Provider[] = [];
-    public $_ctxs: Record<string, Component>;
+    public $_cs: Record<string, Component> = {};
 
     constructor(public props: IObject<any> = {}, public context?: any) { }
 
@@ -24,7 +24,7 @@ export class Component {
     }
     shouldComponentUpdate(props: Record<string, any>, state: Record<string, any>): boolean | void | undefined;
     shouldComponentUpdate(props, state) {
-        return this.props === props && this.state === state;
+        return this.props !== props || this.state !== state;
     }
     public setState(state: IObject<any>, callback?: Function, isForceUpdate?: boolean) {
         if (!this.$_timer) {
@@ -36,7 +36,7 @@ export class Component {
         this.$_state = { ...this.$_state, ...state };
 
         if (!isForceUpdate) {
-            this.$_timer = setTimeout(() => {
+            this.$_timer = window.setTimeout(() => {
                 this.$_timer = 0;
                 this.$_setState(callback, isForceUpdate);
             });
@@ -54,7 +54,7 @@ export class Component {
     public componentWillUnmount() { }
     private $_setState(callback?: Function, isForceUpdate?: boolean) {
         const hooks: Function[] = [];
-        const provider = this.$_provider;
+        const provider = this.$_p;
         const isUpdate = renderProviders(
             provider.container!,
             [provider],
@@ -69,6 +69,7 @@ export class Component {
                 hooks.push(callback);
             }
             executeHooks(hooks);
+            setCurrentInstance(null);
         }
     }
 }

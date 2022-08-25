@@ -1,9 +1,9 @@
 {
   "name": "croact",
-  "version": "1.2.3",
+  "version": "1.0.0",
   "description": "Simple React for compatible use",
-  "main": "./dist/compat.cjs.js",
-  "module": "./dist/compat.esm.js",
+  "main": "./dist/croact.cjs.js",
+  "module": "./dist/croact.esm.js",
   "sideEffects": false,
   "types": "declaration/index.d.ts",
   "scripts": {
@@ -26,12 +26,12 @@
   "homepage": "https://github.com/daybrush/croact#readme",
   "devDependencies": {
     "@daybrush/builder": "^0.1.2",
-    "print-sizes": "^0.1.0",
+    "print-sizes": "^0.2.0",
     "tslint": "^5.20.1",
     "typescript": "^3.7.4"
   },
   "dependencies": {
-    "@daybrush/utils": "^1.7.1",
+    "@daybrush/utils": "^1.8.0",
     "@egjs/list-differ": "^1.0.0"
   }
 }

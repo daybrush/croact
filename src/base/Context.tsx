@@ -7,8 +7,8 @@ export function createContext(defaultValue?: any): Context {
     const id = `c${++i}`;
 
     function Provider(this: Component, props: any) {
-        if (!this.$_ctxs) {
-            const $_ctxs = { [id]: this };
+        if (!this.$_cs[id]) {
+            this.$_cs[id] = this;
             const $_subs = [];
 
             this.shouldComponentUpdate = (nextProps) => {
@@ -17,9 +17,12 @@ export function createContext(defaultValue?: any): Context {
                     this.$_req = true;
                 }
             }
+            this.render = () => {
+                return this.props.children[0];
+            };
             this.$_subs = $_subs;
-            this.$_ctxs = $_ctxs;
         }
+        return props.children[0];
     }
     function Consumer(props, contextValue) {
         return props.children(contextValue);

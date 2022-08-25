@@ -1,13 +1,13 @@
-import { decamelize, IObject } from "@daybrush/utils";
+import { addEvent, decamelize, getKeys, IObject, removeEvent } from "@daybrush/utils";
 import { diff } from "@egjs/list-differ";
 import { renderProviders } from "../renderProviders";
-import { isDiff, splitProps, getAttributes, findContainerNode } from "../utils";
+import { isDiff, splitProps, getAttributes, findContainerNode, removeNode } from "../utils";
 import { Component } from "./Component";
 import { Provider } from "./Provider";
 
 
 function diffAttributes(attrs1: IObject<any>, attrs2: IObject<any>, el: Element) {
-    const { added, removed, changed } = diffObject(attrs1, attrs2);
+    const { added, removed, changed } = diffObject(getAttributes(attrs1), getAttributes(attrs2));
     for (const name in added) {
         el.setAttribute(name, added[name]);
     }
@@ -27,23 +27,23 @@ function diffEvents(
     const { added, removed, changed } = diffObject(events1, events2);
 
     for (const name in removed) {
-        provier.removeEventListener(name);
+        provier.re(name);
     }
     for (const name in added) {
-        provier.addEventListener(name, added[name]);
+        provier.ae(name, added[name]);
     }
     for (const name in changed) {
-        provier.removeEventListener(name);
-        provier.addEventListener(name, changed[name][1]);
+        provier.re(name);
+        provier.ae(name, changed[name][1]);
     }
     for (const name in removed) {
-        provier.removeEventListener(name);
+        provier.re(name);
     }
 }
 
 function diffObject(a: object, b: object) {
-    const keys1 = Object.keys(a);
-    const keys2 = Object.keys(b);
+    const keys1 = getKeys(a);
+    const keys2 = getKeys(b);
 
     const result = diff(keys1, keys2, key => key);
 
@@ -83,29 +83,17 @@ function diffStyle(style1: IObject<any>, style2: IObject<any>, el: HTMLElement |
     for (const beforeName in added) {
         const name = decamelize(beforeName, "-");
 
-        if (style.setProperty) {
-            style.setProperty(name, added[beforeName]);
-        } else {
-            style[name] = added[beforeName];
-        }
+        style.setProperty(name, added[beforeName]);
     }
     for (const beforeName in changed) {
         const name = decamelize(beforeName, "-");
 
-        if (style.setProperty) {
-            style.setProperty(name, changed[beforeName][1]);
-        } else {
-            style[name] = changed[beforeName][1];
-        }
+        style.setProperty(name, changed[beforeName][1]);
     }
     for (const beforeName in removed) {
         const name = decamelize(beforeName, "-");
 
-        if (style.removeProperty) {
-            style.removeProperty(name);
-        } else {
-            style[name] = "";
-        }
+        style.removeProperty(name);
     }
 }
 
@@ -114,19 +102,19 @@ export class ElementProvider extends Provider<Element> {
     public events: IObject<Function> = {};
     public _isSVG = false;
 
-    public addEventListener(name, callback) {
+    public ae(name, callback) {
         const events = this.events;
 
         events[name] = e => {
             e.nativeEvent = e;
             callback(e);
         };
-        this.base.addEventListener(name, events[name] as any);
+        addEvent(this.base, name, events[name] as any);
     }
-    public removeEventListener(name) {
+    public re(name) {
         const events = this.events;
 
-        this.base.removeEventListener(name, events[name] as any);
+        removeEvent(this.base, name, events[name] as any);
 
         delete events[name];
     }
@@ -134,24 +122,33 @@ export class ElementProvider extends Provider<Element> {
         return isDiff(this.props, nextProps);
     }
     public _render(hooks: Function[], contextValues: Record<string, Component>, prevProps: any) {
-        const isMount = !this.base;
+        const self = this;
+        const isMount = !self.base;
 
         if (isMount) {
-            const isSVG = this._hasSVG();
+            let isSVG = false;
 
-            this._isSVG = isSVG!;
+            if (self._isSVG || self.type === "svg") {
+                isSVG = true;
+            } else {
+                const containerNode = findContainerNode(self.container);
 
-            let element = this.props.portalContainer;
+                isSVG = containerNode && (containerNode as any).ownerSVGElement;
+            }
+
+            self._isSVG = isSVG!;
+
+            let element = self.props.portalContainer;
 
             if (!element) {
-                const type = this.type;
+                const type = self.type;
                 if (isSVG) {
                     element = document.createElementNS("http://www.w3.org/2000/svg", type);
                 } else {
                     element = document.createElement(type);
                 }
             }
-            this.base = element;
+            self.base = element;
         }
         renderProviders(this, this._ps, this.props.children, hooks, contextValues);
         const base = this.base;
@@ -164,9 +161,10 @@ export class ElementProvider extends Provider<Element> {
             attributes: nextAttributes,
             events: nextEvents,
         } = splitProps(this.props);
+
         diffAttributes(
-            getAttributes(prevAttributes),
-            getAttributes(nextAttributes),
+            prevAttributes,
+            nextAttributes,
             base,
         );
         diffEvents(
@@ -193,7 +191,7 @@ export class ElementProvider extends Provider<Element> {
         const base = this.base;
 
         for (const name in events) {
-            base.removeEventListener(name, events[name] as any);
+            removeEvent(base, name, events[name] as any);
         }
         this._ps.forEach(provider => {
             provider._unmount();
@@ -201,15 +199,7 @@ export class ElementProvider extends Provider<Element> {
         this.events = {};
 
         if (!this.props.portalContainer) {
-            base.parentNode!.removeChild(base);
+            removeNode(base);
         }
-    }
-    private _hasSVG() {
-        if (this._isSVG || this.type === "svg") {
-            return true;
-        }
-        const containerNode = findContainerNode(this.container);
-
-        return containerNode && "ownerSVGElement" in containerNode;
     }
 }

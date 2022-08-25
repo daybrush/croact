@@ -1,4 +1,4 @@
-import { findIndex, getKeys, IObject } from "@daybrush/utils";
+import { findIndex, IObject } from "@daybrush/utils";
 import { renderProviders } from "../renderProviders";
 import { Context } from "../types";
 import { fillProps, renderFunctionComponent } from "../utils";
@@ -18,23 +18,26 @@ export class ComponentProvider extends Provider<Component> {
         super(type, depth, key, index, container, ref, fillProps(props, type.defaultProps));
     }
     public _should(nextProps: any, nextState: any) {
-        return this.base.shouldComponentUpdate(
+        const base = this.base;
+
+        return base.shouldComponentUpdate(
             fillProps(nextProps, this.type.defaultProps),
-            nextState || this.base.state,
+            nextState || base.state,
         ) !== false;
     }
     public _render(hooks: Function[], contexts: Record<string, Component>, prevProps: any) {
-        const type: any = this.type;
-        this.props = fillProps(this.props, this.type.defaultProps);
+        const self = this;
+        const type: any = self.type;
+        self.props = fillProps(self.props, self.type.defaultProps);
 
-        const props = this.props;
-        let base = this.base;
-        const isMount = !this.base;
-        
+        const props = self.props;
+        let base = self.base;
+        const isMount = !self.base;
 
-        this._cs = contexts;
 
-        const contextType: Context = type.conextType;
+        self._cs = contexts;
+
+        const contextType: Context = type.contextType;
         let contextValue!: any;
         let providerComponent!: Component;
 
@@ -50,33 +53,33 @@ export class ComponentProvider extends Provider<Component> {
         }
         if (isMount) {
             if (providerComponent) {
-                providerComponent.$_subs.push(this);
+                providerComponent.$_subs.push(self);
             }
             if ("prototype" in type && type.prototype.render) {
-                base = new type(this.props, contextValue);
+                base = new type(self.props, contextValue);
             } else {
                 base = new Component(props, contextValue);
                 base.constructor = type;
                 base.render = renderFunctionComponent;
             }
-            base.$_provider = this;
+            base.$_p = self;
 
-            this.base = base;
+            self.base = base;
         } else {
-            base.props = this.props;
+            base.props = props;
             base.context = contextValue;
         }
         const prevState = base.state;
         const template = base.render();
 
         if (template && template.props && !template.props.children.length) {
-            template.props.children = this.props.children;
+            template.props.children = self.props.children;
         }
-        const nextContexts = {...contexts, ...base.$_ctxs };
+        const nextContexts = {...contexts, ...base.$_cs };
 
         renderProviders(
-            this,
-            this._ps,
+            self,
+            self._ps,
             template ? [template] : [],
             hooks,
             nextContexts,

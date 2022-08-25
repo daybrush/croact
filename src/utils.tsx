@@ -62,8 +62,8 @@ export function getAttributes(props: IObject<any>) {
 }
 
 export function splitProps(props: IObject<any>) {
-    const attributes = {};
-    const events = {};
+    const attributes: Record<string, any> = {};
+    const events: Record<string, any> = {};
 
     for (const name in props) {
         if (name.indexOf("on") === 0) {
@@ -91,13 +91,11 @@ export function findContainerNode(provider?: Provider | null): Node | null {
 }
 
 export function findDOMNode(comp: Component | Node | null): Node | null {
-    if (!comp) {
-        return null;
+    if (!comp || comp instanceof Node) {
+        return comp as Node | null;
     }
-    if (comp instanceof Node) {
-        return comp;
-    }
-    const providers = comp.$_provider._ps;
+    const providers = comp.$_p._ps;
+
     if (!providers.length) {
         return null;
     }
@@ -118,6 +116,14 @@ export function createElement(
         ref,
         props: { ...otherProps, children: flat(children).filter(child => child != null && child !== false) },
     };
+}
+
+export function removeNode(node: Node) {
+	const parentNode = node.parentNode;
+
+	if (parentNode) {
+        parentNode.removeChild(node);
+    }
 }
 
 export function executeHooks(hooks: Function[]) {

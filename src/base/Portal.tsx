@@ -5,25 +5,28 @@ import { PureComponent } from "./Component";
 import { Provider } from "./Provider";
 
 class Portal extends PureComponent {
-    public _portalProvider: Provider | null = null;
+    /**
+     * portal provider
+     */
+    public _pp!: Provider | null;
     public componentDidMount() {
         const { element, container } = this.props;
 
-        const parentProvider = this.$_provider;
-        this._portalProvider = new ContainerProvider(container, parentProvider.depth + 1);
+        const parentProvider = this.$_p;
+        this._pp = new ContainerProvider(container, parentProvider.depth + 1);
 
-        renderProvider(element, container, this._portalProvider, parentProvider._cs);
+        renderProvider(element, container, this._pp, parentProvider._cs);
     }
     public componentDidUpdate() {
         const { element, container } = this.props;
 
-        renderProvider(element, container, this._portalProvider, this.$_provider._cs);
+        renderProvider(element, container, this._pp, this.$_p._cs);
     }
     public componentWillUnmount() {
         const { container } = this.props;
 
-        renderProvider(null, container, this._portalProvider, this.$_provider._cs);
-        this._portalProvider = null;
+        renderProvider(null, container, this._pp, this.$_p._cs);
+        this._pp = null;
     }
 }
 

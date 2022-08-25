@@ -1,8 +1,12 @@
-import { find, getKeys, IObject, isString } from "@daybrush/utils";
+import { find, getKeys, getValues, IObject, isString } from "@daybrush/utils";
 import { Component } from "./Component";
 import { CompatElement } from "../types";
 import { flat } from "../utils";
 import { renderProviders } from "../renderProviders";
+
+
+let hooksIndex = 0;
+let current: Provider | null = null;
 
 export abstract class Provider<T extends Element | Component | Node = Element | Component | Node> {
     public original: CompatElement | string;
@@ -40,7 +44,7 @@ export abstract class Provider<T extends Element | Component | Node = Element | 
         isForceUpdate?: boolean,
     ) {
         const currentDepth = this.depth;
-        const scheduledContexts = getKeys(contexts).map(id => contexts[id]).filter(context => {
+        const scheduledContexts = getValues(contexts).filter(context => {
             return context.$_req;
         });
         const scheduledSubs = flat(scheduledContexts.map(context => context.$_subs)) as Provider[];
@@ -54,10 +58,6 @@ export abstract class Provider<T extends Element | Component | Node = Element | 
             && !this._should(nextElement.props, nextState)
             && !isContextUpdate
         ) {
-            scheduledSubs.sort((a, b) => {
-                return a.depth - b.depth;
-            });
-
             const nextChildSubs = scheduledSubs.reduce((childs, sub) => {
                 const depth = sub.depth;
 
@@ -70,7 +70,7 @@ export abstract class Provider<T extends Element | Component | Node = Element | 
                 }
                 return childs;
             }, [] as Provider[]);
-            
+
             nextChildSubs.forEach(child => {
                 // provider.container!,
                 // [provider],
@@ -100,6 +100,8 @@ export abstract class Provider<T extends Element | Component | Node = Element | 
             this.props = nextElement.props;
             this.ref = nextElement.ref;
         }
+
+        setCurrentInstance(this);
         this._render(hooks, contexts, this.base ? prevProps : {}, nextState);
         return true;
     }
@@ -116,8 +118,19 @@ export abstract class Provider<T extends Element | Component | Node = Element | 
         const ref = this.ref;
         ref && ref(this.base);
     }
-    public _destroy() {
-        const ref = this.ref;
-        ref && ref(null);
-    }
+}
+
+
+export function getCurrentInstance() {
+    return current;
+}
+export function getHooksIndex() {
+    return hooksIndex;
+}
+export function setHooksInex(nextHooksIndex: number) {
+    hooksIndex = nextHooksIndex;
+}
+export function setCurrentInstance(provider: Provider | null) {
+    current = provider;
+    hooksIndex = 0;
 }
