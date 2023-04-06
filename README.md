@@ -1,3 +1,8 @@
+
+Alias `react`, `react-dom` to `croact`
+
+It also supports `react`'s lightweight modules and additional features to support react's components to other frameworks.
+
 ## ⚙️ Installation
 ### npm
 ```bash
@@ -5,12 +10,18 @@ $ npm install croact
 ```
 
 ## No supported
-* Context
-* Hooks
-* Fragments
+* Fragment
+
+
+## Used Components
+* `Moveable`: https://github.com/daybrush/moveable
+* `Guides`: https://github.com/daybrush/guides
+* `Ruler`: https://github.com/daybrush/ruler
+
+
 
 ## 🚀 How to use
-Alias react, react-dom to croact
+
 
 
 * Rollup
