@@ -21,9 +21,18 @@ $ npm install croact
 
 
 ## 🚀 How to use
+* self render
+```html
+<div>Self</div>
+```
+
+```jsx
+import { renderSelf } from "croact";
 
 
+renderSelf(<div>Self</div>, document.querySelector("div"));
 
+```
 * Rollup
 ```js
 import reactCompat from "rollup-plugin-react-compat";
