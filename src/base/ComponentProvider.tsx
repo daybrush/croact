@@ -1,81 +1,107 @@
-import { findIndex, IObject } from "@daybrush/utils";
+import { IObject } from "@daybrush/utils";
+import { HookInfo, HooksProvider } from "../hooks/hooks";
 import { renderProviders } from "../renderProviders";
-import { Context } from "../types";
+import { Context, Ref } from "../types";
 import { fillProps, renderFunctionComponent } from "../utils";
 import { Component } from "./Component";
 import { Provider } from "./Provider";
+import { createRef } from "./refs";
 
-export class ComponentProvider extends Provider<Component> {
+
+export function createComponent(
+    type: any,
+    props: any,
+    contextValue: any,
+    self: any,
+) {
+    let base!: Component;
+    if (type?.prototype?.render) {
+        base = new type(props, contextValue);
+    } else {
+        base = new Component(props, contextValue);
+        base.constructor = type;
+
+        if (type._fr) {
+            self.fr = createRef();
+            base.render = function (this: Component) {
+                return this.constructor(this.props, self.fr);
+            }
+        } else {
+            base.render = renderFunctionComponent;
+        }
+    }
+    base.$_p = self;
+    return base;
+}
+
+export class ComponentProvider extends Provider<Component> implements HooksProvider {
+    public typ = "comp";
+    /**
+     * Update shift effects
+     */
+    public _usefs: Array<() => (() => any) | undefined | void> = [];
+    /**
+     * Update effects
+     */
+    public _uefs: Array<() => (() => any) | undefined | void> = [];
+    /**
+     * Destroy effects
+     */
+    public _defs: Array<undefined | void | (() => void)> = [];
+    /**
+     * Hooks
+     */
+    public _hs?: HookInfo[];
     constructor(
         type: typeof Component,
         depth: number,
         key: string,
         index: number,
         container?: Provider | null,
-        ref?: (e: Element | Component | Node | null) => any,
+        ref?: Ref,
         props: IObject<any> = {},
     ) {
         super(type, depth, key, index, container, ref, fillProps(props, type.defaultProps));
     }
-    public _should(nextProps: any, nextState: any) {
-        const base = this.base;
+
+    public s(nextProps: any, nextState: any) {
+        const base = this.b;
 
         return base.shouldComponentUpdate(
-            fillProps(nextProps, this.type.defaultProps),
+            fillProps(nextProps, this.t.defaultProps),
             nextState || base.state,
         ) !== false;
     }
-    public _render(hooks: Function[], contexts: Record<string, Component>, prevProps: any) {
+
+    public r(hooks: Function[], contexts: Record<string, Component>, prevProps: any) {
         const self = this;
-        const type: any = self.type;
-        self.props = fillProps(self.props, self.type.defaultProps);
+        const type: any = self.t;
+        self.ps = fillProps(self.ps, self.t.defaultProps);
 
-        const props = self.props;
-        let base = self.base;
-        const isMount = !self.base;
-
+        const props = self.ps;
+        const isMount = !self.b;
+        const contextType: Context = type.contextType;
+        let base = self.b;
+        const contextValue = contextType?.get(self);
 
         self._cs = contexts;
-
-        const contextType: Context = type.contextType;
-        let contextValue!: any;
-        let providerComponent!: Component;
-
-        if (contextType) {
-            const contextId = contextType.$_id;
-
-            if (contextId in contexts) {
-                providerComponent = contexts[contextId];
-                contextValue = providerComponent.props.value;
-            } else {
-                contextValue = contextType.$_dv;
-            }
-        }
         if (isMount) {
-            if (providerComponent) {
-                providerComponent.$_subs.push(self);
-            }
-            if ("prototype" in type && type.prototype.render) {
-                base = new type(self.props, contextValue);
-            } else {
-                base = new Component(props, contextValue);
-                base.constructor = type;
-                base.render = renderFunctionComponent;
-            }
-            base.$_p = self;
-
-            self.base = base;
+            base = createComponent(type, props, contextValue, self);
+            self.b = base;
         } else {
             base.props = props;
             base.context = contextValue;
         }
         const prevState = base.state;
+
+        self._usefs = [];
+        self._uefs = [];
         const template = base.render();
 
-        if (template && template.props && !template.props.children.length) {
-            template.props.children = self.props.children;
+        if (template?.props?.children?.length === 0) {
+            template.props.children = self.ps.children;
         }
-        const nextContexts = {...contexts, ...base.$_cs };
+        const nextContexts = { ...contexts, ...base.$_cs };
 
         renderProviders(
             self,
@@ -84,45 +110,48 @@ export class ComponentProvider extends Provider<Component> {
             hooks,
             nextContexts,
         );
-        hooks.push(() => {
-            if (isMount) {
-                this._mounted();
+        if (isMount) {
+            self._uefs.push(() => {
+                contextType?.register(self);
                 base.componentDidMount();
-            } else {
-                this._updated();
+            });
+        } else {
+            self._uefs.push(() => {
                 base.componentDidUpdate(prevProps, prevState);
+            });
+        }
+        hooks.push(() => {
+            self._usefs.forEach(ef => {
+                ef();
+            });
+            if (isMount) {
+                self.md();
+            } else {
+                self.ud();
             }
+            self._defs = self._uefs.map(ef => ef());
         });
     }
-    public _setState(nextState?: IObject<any>) {
-        const base = this.base;
+    public ss(nextState?: IObject<any>) {
+        const base = this.b;
 
         if (!base || !nextState) {
             return;
         }
         base.state = nextState;
     }
-    public _unmount() {
-        this._ps.forEach(provider => {
-            provider._unmount();
+    public un() {
+        const self = this;
+        self._ps.forEach(provider => {
+            provider.un();
         });
-        const contexts = this._cs;
-        const type = this.type;
-        const contextType = type.contextType;
+        const type = self.t;
+        (type.contextType as Context)?.unregister(self);
+        clearTimeout(self.b.$_timer);
 
-        if (contextType) {
-            const context = contexts[contextType];
-
-            if (context) {
-                const subs = context.$_subs;
-                const index = findIndex(subs, sub => sub === this);
-
-                if (index > -1) {
-                    subs.splice(index, 1);
-                }
-            }
-        }
-        clearTimeout(this.base.$_timer);
-        this.base.componentWillUnmount();
+        self._defs.forEach(def => {
+            def && def();
+        });
+        self.b.componentWillUnmount();
     }
 }

@@ -1,34 +1,35 @@
 
-import builder from "@daybrush/builder";
+const builder = require("@daybrush/builder");
 
-export default builder([
+module.exports = builder([
     {
         input: "src/index.ts",
         output: "./dist/croact.esm.js",
+        minifyPrototype: true,
         exports: "named",
         format: "es",
     },
     {
         input: "src/index.ts",
         output: "./dist/croact.cjs.js",
+        minifyPrototype: true,
         exports: "named",
         format: "cjs",
     },
     {
         input: "src/index.ts",
-        output: "./dist/croact.umd.js",
+        output: "./dist/croact.js",
         name: "Croact",
         exports: "named",
         format: "umd",
         resolve: true,
-        uglify: true,
     },
     {
         input: "src/index.ts",
-        output: "./dist/croact.cjs2.js",
+        output: "./dist/croact.min.js",
         name: "Croact",
         exports: "named",
-        format: "cjs",
+        format: "umd",
         resolve: true,
         uglify: true,
     },

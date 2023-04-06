@@ -1,5 +1,7 @@
+import { findIndex, pushSet } from "@daybrush/utils";
 import { Context } from "../types";
 import { Component } from "./Component";
+import { Provider } from "./Provider";
 
 let i/*#__PURE__*/ = 0;
 
@@ -7,20 +9,21 @@ export function createContext(defaultValue?: any): Context {
     const id = `c${++i}`;
 
     function Provider(this: Component, props: any) {
-        if (!this.$_cs[id]) {
-            this.$_cs[id] = this;
+        const self = this;
+        if (!self.$_cs[id]) {
+            self.$_cs[id] = self;
             const $_subs = [];
 
-            this.shouldComponentUpdate = (nextProps) => {
-                if (nextProps.value !== this.props.value) {
+            self.shouldComponentUpdate = (nextProps) => {
+                if (nextProps.value !== self.props.value) {
                     // request
-                    this.$_req = true;
+                    self.$_req = true;
                 }
             }
-            this.render = () => {
-                return this.props.children[0];
+            self.render = () => {
+                return self.props.children[0];
             };
-            this.$_subs = $_subs;
+            self.$_subs = $_subs;
         }
         return props.children[0];
     }
@@ -28,11 +31,36 @@ export function createContext(defaultValue?: any): Context {
         return props.children(contextValue);
     }
 
+    function getContext(provider: Provider) {
+        return provider._cs[id];
+    }
     const context = {
         $_id: id,
         $_dv: defaultValue,
         Consumer,
         Provider: Provider,
+        get(provider: Provider) {
+            return getContext(provider)?.props.value ?? defaultValue;
+        },
+        register(provider: Provider) {
+            const mainComponent = getContext(provider);
+
+            if (mainComponent) {
+                pushSet(mainComponent.$_subs, provider);
+            }
+        },
+        unregister(provider: Provider) {
+            const mainComponent = getContext(provider);
+
+            if (mainComponent) {
+                const subs = mainComponent.$_subs;
+                const index = subs.indexOf(provider);
+
+                if (index > -1) {
+                    subs.splice(index, 1);
+                }
+            }
+        },
     };
 
     Consumer.contextType = context;

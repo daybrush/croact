@@ -34,7 +34,9 @@ export function fillProps(props: IObject<any>, defaultProps?: IObject<any>) {
 }
 
 export function isDiff(a: object, b: object) {
-    if (a === b) { return false; }
+    if (a === b) {
+        return false;
+    }
     for (const i in a) {
         if (!(i in b)) {
             return true;
@@ -67,15 +69,15 @@ export function splitProps(props: IObject<any>) {
 
     for (const name in props) {
         if (name.indexOf("on") === 0) {
-            events[name.replace("on", "").toLowerCase()] = props[name];
+            events[name] = props[name];
         } else {
             attributes[name] = props[name];
         }
     }
-    return {
+    return [
         attributes,
         events,
-    };
+    ];
 }
 
 
@@ -83,39 +85,11 @@ export function findContainerNode(provider?: Provider | null): Node | null {
     if (!provider) {
         return null;
     }
-    const base = provider.base;
+    const base = provider.b;
     if (base instanceof Node) {
         return base;
     }
-    return findContainerNode(provider.container);
-}
-
-export function findDOMNode(comp: Component | Node | null): Node | null {
-    if (!comp || comp instanceof Node) {
-        return comp as Node | null;
-    }
-    const providers = comp.$_p._ps;
-
-    if (!providers.length) {
-        return null;
-    }
-    return findDOMNode(providers[0].base);
-}
-
-
-export function createElement(
-    type: any,
-    props: any,
-    ...children: any[]
-): CompatElement {
-    const { key, ref, ...otherProps } = props || {};
-
-    return {
-        type,
-        key,
-        ref,
-        props: { ...otherProps, children: flat(children).filter(child => child != null && child !== false) },
-    };
+    return findContainerNode(provider.c);
 }
 
 export function removeNode(node: Node) {

@@ -1,68 +1,121 @@
-import { find, getKeys, getValues, IObject, isString } from "@daybrush/utils";
+import { find, getValues, IObject, isString } from "@daybrush/utils";
 import { Component } from "./Component";
-import { CompatElement } from "../types";
+import { CompatElement, ContextProvider, Ref } from "../types";
 import { flat } from "../utils";
 import { renderProviders } from "../renderProviders";
+import { HooksProvider } from "../hooks/hooks";
 
 
 let hooksIndex = 0;
-let current: Provider | null = null;
+let current: Provider | HooksProvider | null = null;
 
-export abstract class Provider<T extends Element | Component | Node = Element | Component | Node> {
-    public original: CompatElement | string;
-    public base: T;
+export abstract class Provider<T extends Element | Component | Node = Element | Component | Node> implements ContextProvider {
+    public typ = "prov";
+    /**
+     * Original
+     */
+    public o: CompatElement | string;
+    /**
+     * Base
+     */
+    public b: T;
     /**
      * providers
      */
     public _ps: Array<Provider<any>> = [];
     /**
+     * Forwarded Ref
+     */
+    public fr?: Ref;
+    /**
      * Contexts
      */
     public _cs: Record<string, Component> = {};
-
+    /**
+     * Whether to hydrate
+     */
+    public _hyd: Node[] | null = null;
+    /**
+     * is self render
+     */
+    public _sel = false;
     constructor(
-        public type: any,
-        public depth: number,
-        public key: string,
-        public index: number,
-        public container?: Provider | null,
-        public ref?: ((e: Element | Component | Node | null) => any) | null,
-        public props: IObject<any> = {},
+        /**
+         * Type
+         */
+        public t: any,
+        /**
+         * Depth
+         */
+        public d: number,
+        /**
+         * Key
+         */
+        public k: string,
+        /**
+         * index
+         */
+        public i: number,
+        /**
+         * Container
+         */
+        public c?: Provider | null,
+        /**
+         * Ref
+         */
+        public ref?: Ref,
+        /**
+         * Props
+         */
+        public ps: IObject<any> = {},
     ) { }
-    public abstract _render(hooks: Function[], contextValues: Record<string, Component>, prevProps: any, nextState?: any);
-    public abstract _unmount();
+    /**
+     * Render
+     */
+    public abstract r(hooks: Function[], contextValues: Record<string, Component>, prevProps: any, nextState?: any);
+    /**
+     * Unmount
+     */
+    public abstract un();
 
-    public _should(nextProps: any, nextState: any): boolean;
-    public _should() {
+    /**
+     * Should update
+     */
+    public s(nextProps: any, nextState: any): boolean;
+    public s() {
         return true;
     }
-    public _update(
+    /**
+     * Update
+     */
+    public u(
         hooks: Function[],
         contexts: Record<string, Component>,
         nextElement: CompatElement | string,
         nextState?: any,
         isForceUpdate?: boolean,
     ) {
-        const currentDepth = this.depth;
+        const self = this;
+        const currentDepth = self.d;
         const scheduledContexts = getValues(contexts).filter(context => {
             return context.$_req;
         });
         const scheduledSubs = flat(scheduledContexts.map(context => context.$_subs)) as Provider[];
         const isContextUpdate = find(scheduledSubs, provider => {
-            return provider.depth === currentDepth;
+            return provider.d === currentDepth;
         });
         if (
-            this.base
+            self.b
             && !isString(nextElement)
             && !isForceUpdate
-            && !this._should(nextElement.props, nextState)
+            && !self.s(nextElement.props, nextState)
             && !isContextUpdate
         ) {
             const nextChildSubs = scheduledSubs.reduce((childs, sub) => {
-                const depth = sub.depth;
+                const depth = sub.d;
 
                 if (childs[0]) {
-                    if (childs[0].depth === depth) {
+                    if (childs[0].d === depth) {
                         childs.push(sub);
                     }
                 } else if (depth > currentDepth) {
@@ -77,12 +130,12 @@ export abstract class Provider<T extends Element | Component | Node = Element | 
                 // [provider.original],
                 // hooks,
                 // provider._cs,
-                // { ...this.state, ...this.$_state },
+                // { ...self.state, ...self.$_state },
                 // isForceUpdate,
                 renderProviders(
                     child,
                     child._ps,
-                    [child.original],
+                    [child.o],
                     hooks,
                     contexts,
                     true,
@@ -91,32 +144,40 @@ export abstract class Provider<T extends Element | Component | Node = Element | 
 
             return false;
         }
-        this.original = nextElement;
-        this._setState(nextState);
+        self.o = nextElement;
+        self.ss(nextState);
         // render
-        const prevProps = this.props;
+        const prevProps = self.ps;
 
         if (!isString(nextElement)) {
-            this.props = nextElement.props;
-            this.ref = nextElement.ref;
+            self.ps = nextElement.props;
+            self.ref = nextElement.ref;
         }
 
         setCurrentInstance(this);
-        this._render(hooks, contexts, this.base ? prevProps : {}, nextState);
+        self.r(hooks, contexts, self.b ? prevProps : {}, nextState);
         return true;
     }
-    public _mounted() {
-        const ref = this.ref;
-        ref && ref(this.base);
+    public md() {
+        this.rr();
     }
 
-    public _setState(nextstate: IObject<any>);
-    public _setState() {
+    public ss(nextstate: IObject<any>);
+    public ss() {
         return;
     }
-    public _updated() {
-        const ref = this.ref;
-        ref && ref(this.base);
+    public ud() {
+        this.rr();
+    }
+    /**
+     * register refs
+     */
+    public rr() {
+        const self = this;
+        const ref = self.ref;
+
+        const fr = self.fr;
+        ref && ref(fr ? fr.current : self.b);
     }
 }
 
@@ -130,7 +191,7 @@ export function getHooksIndex() {
 export function setHooksInex(nextHooksIndex: number) {
     hooksIndex = nextHooksIndex;
 }
-export function setCurrentInstance(provider: Provider | null) {
+export function setCurrentInstance(provider: Provider | HooksProvider | null) {
     current = provider;
     hooksIndex = 0;
 }

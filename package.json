@@ -18,20 +18,22 @@
   "license": "MIT",
   "keywords": [
     "react",
-    "compat"
+    "compat",
+    "croact"
   ],
   "bugs": {
     "url": "https://github.com/daybrush/croact/issues"
   },
   "homepage": "https://github.com/daybrush/croact#readme",
   "devDependencies": {
-    "@daybrush/builder": "^0.1.2",
+    "@daybrush/builder": "^0.2.4",
     "print-sizes": "^0.2.0",
+    "tslib": "^2.3.1",
     "tslint": "^5.20.1",
-    "typescript": "^3.7.4"
+    "typescript": "^4"
   },
   "dependencies": {
-    "@daybrush/utils": "^1.8.0",
+    "@daybrush/utils": "^1.11.0",
     "@egjs/list-differ": "^1.0.0"
   }
 }

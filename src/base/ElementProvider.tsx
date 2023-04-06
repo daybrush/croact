@@ -1,4 +1,4 @@
-import { addEvent, decamelize, getKeys, IObject, removeEvent } from "@daybrush/utils";
+import { addEvent, decamelize, getKeys, removeEvent } from "@daybrush/utils";
 import { diff } from "@egjs/list-differ";
 import { renderProviders } from "../renderProviders";
 import { isDiff, splitProps, getAttributes, findContainerNode, removeNode } from "../utils";
@@ -6,7 +6,7 @@ import { Component } from "./Component";
 import { Provider } from "./Provider";
 
 
-function diffAttributes(attrs1: IObject<any>, attrs2: IObject<any>, el: Element) {
+function diffAttributes(attrs1: Record<string, any>, attrs2: Record<string, any>, el: Element) {
     const { added, removed, changed } = diffObject(getAttributes(attrs1), getAttributes(attrs2));
     for (const name in added) {
         el.setAttribute(name, added[name]);
@@ -20,24 +20,17 @@ function diffAttributes(attrs1: IObject<any>, attrs2: IObject<any>, el: Element)
 }
 
 function diffEvents(
-    events1: IObject<any>,
-    events2: IObject<any>,
+    events1: Record<string, any>,
+    events2: Record<string, any>,
     provier: ElementProvider,
 ) {
-    const { added, removed, changed } = diffObject(events1, events2);
+    const { added, removed } = diffObject(events1, events2);
 
     for (const name in removed) {
-        provier.re(name);
+        provier.e(name, true);
     }
     for (const name in added) {
-        provier.ae(name, added[name]);
-    }
-    for (const name in changed) {
-        provier.re(name);
-        provier.ae(name, changed[name][1]);
-    }
-    for (const name in removed) {
-        provier.re(name);
+        provier.e(name);
     }
 }
 
@@ -47,9 +40,9 @@ function diffObject(a: object, b: object) {
 
     const result = diff(keys1, keys2, key => key);
 
-    const added: IObject<any> = {};
-    const removed: IObject<any> = {};
-    const changed: IObject<any> = {};
+    const added: Record<string, any> = {};
+    const removed: Record<string, any> = {};
+    const changed: Record<string, any> = {};
 
     result.added.forEach(index => {
         const name = keys2[index];
@@ -76,7 +69,7 @@ function diffObject(a: object, b: object) {
     };
 }
 
-function diffStyle(style1: IObject<any>, style2: IObject<any>, el: HTMLElement | SVGElement) {
+function diffStyle(style1: Record<string, any>, style2: Record<string, any>, el: HTMLElement | SVGElement) {
     const style = el.style;
     const { added, removed, changed } = diffObject(style1, style2);
 
@@ -97,70 +90,97 @@ function diffStyle(style1: IObject<any>, style2: IObject<any>, el: HTMLElement |
     }
 }
 
+function getNativeEventName(name: string) {
+    return name.replace(/^on/g, "").toLowerCase();
+}
 
 export class ElementProvider extends Provider<Element> {
-    public events: IObject<Function> = {};
-    public _isSVG = false;
-
-    public ae(name, callback) {
-        const events = this.events;
-
-        events[name] = e => {
-            e.nativeEvent = e;
-            callback(e);
-        };
-        addEvent(this.base, name, events[name] as any);
-    }
-    public re(name) {
-        const events = this.events;
-
-        removeEvent(this.base, name, events[name] as any);
-
-        delete events[name];
-    }
-    public _should(nextProps: any) {
-        return isDiff(this.props, nextProps);
-    }
-    public _render(hooks: Function[], contextValues: Record<string, Component>, prevProps: any) {
+    public typ = "elem";
+    /**
+     * Events
+     */
+    private _es: Record<string, Function> = {};
+    /**
+     * is svg
+     */
+    public _svg = false;
+    public e(name: string, isRemove?: boolean) {
         const self = this;
-        const isMount = !self.base;
+        const events = self._es;
+        const base = self.b;
+        const eventName = getNativeEventName(name);
+
+        if (isRemove) {
+            removeEvent(
+                base,
+                eventName,
+                events[name] as any,
+            );
+            delete events[name];
+        } else {
+            events[name] = (e: Event) => {
+                self.ps[name]?.(e);
+            };
+            addEvent(
+                base,
+                eventName,
+                events[name] as any,
+            );
+        }
+    }
+    public s(nextProps: any) {
+        return isDiff(this.ps, nextProps);
+    }
+    public r(hooks: Function[], contextValues: Record<string, Component>, prevProps: any) {
+        const self = this;
+        const isMount = !self.b;
+        const nextProps = self.ps;
 
         if (isMount) {
             let isSVG = false;
 
-            if (self._isSVG || self.type === "svg") {
+            if (self._svg || self.t === "svg") {
                 isSVG = true;
             } else {
-                const containerNode = findContainerNode(self.container);
+                const containerNode = findContainerNode(self.c);
 
                 isSVG = containerNode && (containerNode as any).ownerSVGElement;
             }
 
-            self._isSVG = isSVG!;
+            self._svg = isSVG!;
 
-            let element = self.props.portalContainer;
+            let element = nextProps.portalContainer;
 
             if (!element) {
-                const type = self.type;
-                if (isSVG) {
-                    element = document.createElementNS("http://www.w3.org/2000/svg", type);
+                element = self._hyd?.splice(0, 1)[0];
+
+                const type = self.t;
+
+                if (element) {
+                    self._hyd = [].slice.call(element.children);
                 } else {
-                    element = document.createElement(type);
+                    if (isSVG) {
+                        element = document.createElementNS("http://www.w3.org/2000/svg", type);
+                    } else {
+                        element = document.createElement(type);
+                    }
                 }
             }
-            self.base = element;
+            self.b = element;
         }
-        renderProviders(this, this._ps, this.props.children, hooks, contextValues);
-        const base = this.base;
 
-        const {
-            attributes: prevAttributes,
-            events: prevEvents,
-        } = splitProps(prevProps);
-        const {
-            attributes: nextAttributes,
-            events: nextEvents,
-        } = splitProps(this.props);
+
+        renderProviders(self, self._ps, nextProps.children, hooks, contextValues);
+        const base = self.b;
+
+        const [
+            prevAttributes,
+            prevEvents,
+        ] = splitProps(prevProps);
+        const [
+            nextAttributes,
+            nextEvents,
+        ] = splitProps(nextProps);
 
         diffAttributes(
             prevAttributes,
@@ -170,35 +190,37 @@ export class ElementProvider extends Provider<Element> {
         diffEvents(
             prevEvents,
             nextEvents,
-            this,
+            self,
         );
         diffStyle(
             prevProps.style || {},
-            this.props.style || {},
+            nextProps.style || {},
             base as HTMLElement,
         );
         hooks.push(() => {
             if (isMount) {
-                this._mounted();
+                self.md();
             } else {
-                this._updated();
+                self.ud();
             }
         });
         return true;
     }
-    public _unmount() {
-        const events = this.events;
-        const base = this.base;
+    public un() {
+        const self = this;
+        const events = self._es;
+        const base = self.b;
 
         for (const name in events) {
             removeEvent(base, name, events[name] as any);
         }
-        this._ps.forEach(provider => {
-            provider._unmount();
+        self._ps.forEach(provider => {
+            provider.un();
         });
-        this.events = {};
+        self._es = {};
 
-        if (!this.props.portalContainer) {
+        if (!self.ps.portalContainer && !self._sel) {
+            console.log(base);
             removeNode(base);
         }
     }

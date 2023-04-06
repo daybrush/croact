@@ -18,7 +18,7 @@ Alias react, react-dom to croact
 import reactCompat from "rollup-plugin-react-compat";
 
 const reactPlugin = reactCompat({
-    useReactCompat: true,
+    useCroact: true,
     resolveCompat: true,
 });
 
