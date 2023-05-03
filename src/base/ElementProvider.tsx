@@ -149,21 +149,18 @@ export class ElementProvider extends Provider<Element> {
 
             self._svg = isSVG!;
 
-            let element = nextProps.portalContainer;
 
-            if (!element) {
-                element = self._hyd?.splice(0, 1)[0];
+            let element = self._hyd?.splice(0, 1)[0] as HTMLElement;
 
-                const type = self.t;
+            const type = self.t;
 
-                if (element) {
-                    self._hyd = [].slice.call(element.children);
+            if (element) {
+                self._hyd = [].slice.call(element.children || []);
+            } else {
+                if (isSVG) {
+                    element = document.createElementNS("http://www.w3.org/2000/svg", type);
                 } else {
-                    if (isSVG) {
-                        element = document.createElementNS("http://www.w3.org/2000/svg", type);
-                    } else {
-                        element = document.createElement(type);
-                    }
+                    element = document.createElement(type);
                 }
             }
             self.b = element;
@@ -219,7 +216,7 @@ export class ElementProvider extends Provider<Element> {
         });
         self._es = {};
 
-        if (!self.ps.portalContainer && !self._sel) {
+        if (!self._sel) {
             removeNode(base);
         }
     }

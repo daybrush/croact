@@ -7,7 +7,6 @@ import { HooksProvider } from "../hooks/hooks";
 
 
 let hooksIndex = 0;
-let current: Provider | HooksProvider | null = null;
 
 export abstract class Provider<T extends Element | Component | Node = Element | Component | Node> implements ContextProvider {
     public typ = "prov";
@@ -182,8 +181,8 @@ export abstract class Provider<T extends Element | Component | Node = Element | 
 }
 
 
-export function getCurrentInstance() {
-    return current;
+export function getCurrentInstance(): Provider | HooksProvider | null {
+    return (Object as any).__CROACT_CURRENT_INSTNACE__;
 }
 export function getHooksIndex() {
     return hooksIndex;
@@ -192,6 +191,6 @@ export function setHooksInex(nextHooksIndex: number) {
     hooksIndex = nextHooksIndex;
 }
 export function setCurrentInstance(provider: Provider | HooksProvider | null) {
-    current = provider;
+    return (Object as any).__CROACT_CURRENT_INSTNACE__ = provider;
     hooksIndex = 0;
 }
