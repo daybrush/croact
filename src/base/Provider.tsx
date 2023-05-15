@@ -191,6 +191,7 @@ export function setHooksInex(nextHooksIndex: number) {
     hooksIndex = nextHooksIndex;
 }
 export function setCurrentInstance(provider: Provider | HooksProvider | null) {
-    return (Object as any).__CROACT_CURRENT_INSTNACE__ = provider;
+    (Object as any).__CROACT_CURRENT_INSTNACE__ = provider;
     hooksIndex = 0;
+    return provider;
 }
