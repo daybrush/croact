@@ -1,10 +1,10 @@
-import { isString } from "@daybrush/utils";
+import { getDocument, isString } from "@daybrush/utils";
 import { diff } from "@egjs/list-differ";
 import { Provider } from "./base/Provider";
 import { findDOMNode } from "./externalUtils";
 import { createProvider } from "./renderProviders";
 import { CompatElement } from "./types";
-import { fillKeys, removeNode } from "./utils";
+import { fillKeys, findContainerNode, removeNode } from "./utils";
 
 
 export class ContainerProvider extends Provider<any> {
@@ -30,9 +30,10 @@ export class TextProvider extends Provider<Node> {
         const isMount = !self.b;
 
         if (isMount) {
+            const containerNode = findContainerNode(self.c);
             const b = self._hyd?.splice(0, 1)[0];
 
-            self.b = b || document.createTextNode(self.t.replace("text_", ""));
+            self.b = b || getDocument(containerNode).createTextNode(self.t.replace("text_", ""));
         }
         hooks.push(() => {
             if (isMount) {

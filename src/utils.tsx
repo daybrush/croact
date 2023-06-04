@@ -1,4 +1,4 @@
-import { IObject, isArray, isUndefined } from "@daybrush/utils";
+import { IObject, isArray, isNode, isUndefined } from "@daybrush/utils";
 import { Component } from "./base/Component";
 import { Provider } from "./base/Provider";
 import { CompatElement } from "./types";
@@ -86,7 +86,8 @@ export function findContainerNode(provider?: Provider | null): Node | null {
         return null;
     }
     const base = provider.b;
-    if (base instanceof Node) {
+
+    if (isNode(base)) {
         return base;
     }
     return findContainerNode(provider.c);

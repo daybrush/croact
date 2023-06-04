@@ -1,11 +1,11 @@
-import { flat } from "@daybrush/utils";
+import { flat, isNode } from "@daybrush/utils";
 import { Component } from "./base/Component";
 import { ComponentProvider } from "./base/ComponentProvider";
 import { Provider } from "./base/Provider";
 import { CompatElement } from "./types";
 
 export function findDOMNode(comp: Component | Node | null): Node | null {
-    if (!comp || comp instanceof Node) {
+    if (!comp || isNode(comp)) {
         return comp as Node | null;
     }
     const providers = comp.$_p._ps;
@@ -20,7 +20,7 @@ export function findNodeProvider(provider: Provider<Node | Component | Element>)
     if (!provider) {
         return;
     }
-    if (provider.b && provider.b instanceof Node) {
+    if (provider.b && isNode(provider.b)) {
         return provider as Provider<Node | Element>;
     }
     const providers = provider._ps;

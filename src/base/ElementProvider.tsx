@@ -1,4 +1,4 @@
-import { addEvent, decamelize, getKeys, removeEvent } from "@daybrush/utils";
+import { addEvent, decamelize, getDocument, getKeys, removeEvent } from "@daybrush/utils";
 import { diff } from "@egjs/list-differ";
 import { renderProviders } from "../renderProviders";
 import { isDiff, splitProps, getAttributes, findContainerNode, removeNode } from "../utils";
@@ -137,19 +137,17 @@ export class ElementProvider extends Provider<Element> {
         const nextProps = self.ps;
 
         if (isMount) {
+            const containerNode = findContainerNode(self.c);
+
             let isSVG = false;
 
             if (self._svg || self.t === "svg") {
                 isSVG = true;
             } else {
-                const containerNode = findContainerNode(self.c);
-
                 isSVG = containerNode && (containerNode as any).ownerSVGElement;
             }
 
             self._svg = isSVG!;
-
-
             let element = self._hyd?.splice(0, 1)[0] as HTMLElement;
 
             const type = self.t;
@@ -157,10 +155,12 @@ export class ElementProvider extends Provider<Element> {
             if (element) {
                 self._hyd = [].slice.call(element.children || []);
             } else {
+                const doc = getDocument(containerNode);
+
                 if (isSVG) {
-                    element = document.createElementNS("http://www.w3.org/2000/svg", type);
+                    element = doc.createElementNS("http://www.w3.org/2000/svg", type);
                 } else {
-                    element = document.createElement(type);
+                    element = doc.createElement(type);
                 }
             }
             self.b = element;
